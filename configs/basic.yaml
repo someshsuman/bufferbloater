@@ -17,7 +17,7 @@ client:
     port: 9002
 server:
   profile:
-    - duration: 55s
+    - duration: 5500s
       latency_distribution:
       - weight: 90
         latency: 50ms
