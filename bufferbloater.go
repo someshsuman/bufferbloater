@@ -176,8 +176,8 @@ func (bb *Bufferbloater) Run() {
 	go bb.statsMgr.PeriodicStatsCollection(100*time.Millisecond, stopStats, &statsWg)
 
 	var wg sync.WaitGroup
-	wg.Add(2)
-	go bb.s.Start(&wg)
+	wg.Add(1)
+	//go bb.s.Start(&wg)
 	go bb.c.Start(&wg)
 	wg.Wait()
 
