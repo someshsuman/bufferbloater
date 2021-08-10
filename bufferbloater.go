@@ -125,7 +125,6 @@ func (bb *Bufferbloater) Run() {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	//go bb.s.Start(&wg)
 	go bb.c.Start(&wg)
 	wg.Wait()
 
