@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -116,7 +118,12 @@ func NewBufferbloater(workload string, rqTimeout string, target string, logger *
 
 func (bb *Bufferbloater) Run() {
 	// TODO: make folder configurable.
-	defer bb.statsMgr.DumpStatsToFolder("data")
+	path, err := os.Getwd()
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Println("Creating status in path=" + path)
+	defer bb.statsMgr.DumpStatsToFolder(path + "/data")
 
 	stopStats := make(chan struct{}, 1)
 	var statsWg sync.WaitGroup
