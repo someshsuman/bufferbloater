@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,34 +37,47 @@ type parsedYamlConfig struct {
 }
 
 // Creates a properly typed client config.
-func clientConfigParse(parsedConfig parsedYamlConfig) (client.Config, error) {
+func clientConfigParse(workload string, rqTimeout string, target string) (client.Config, error) {
 	// TODO: validate config
 
+	serverAddress := strings.Split(target, ":")
+	serverIp := serverAddress[0]
+	port, err := strconv.Atoi(serverAddress[1])
+	if err != nil {
+		return client.Config{}, err
+	}
 	clientConfig := client.Config{
 		TargetServer: client.Target{
-			Address: parsedConfig.Client.TargetServer.Address,
-			Port:    parsedConfig.Client.TargetServer.Port,
+			Address: serverIp,
+			Port:    uint(port),
 		},
 	}
 
-	d, err := time.ParseDuration(parsedConfig.Client.RqTimeout)
+	d, err := time.ParseDuration(rqTimeout)
 	if err != nil {
 		return client.Config{}, err
 	}
 	clientConfig.RequestTimeout = d
+	workloadInput := strings.Split(workload, ",")
+	for _, stage := range workloadInput {
+		rpsRate := strings.Split(stage, ":")
 
-	for _, stage := range parsedConfig.Client.Workload {
-		d, err := time.ParseDuration(stage.Duration)
+		rps, err := strconv.Atoi(rpsRate[0])
+		if err != nil {
+			return client.Config{}, err
+		}
+		d, err := time.ParseDuration(rpsRate[1])
 		if err != nil {
 			return client.Config{}, err
 		}
 
 		workloadStage := client.WorkloadStage{
-			RPS:      stage.Rps,
+			RPS:      uint(rps),
 			Duration: d,
 		}
 		clientConfig.Workload = append(clientConfig.Workload, workloadStage)
 	}
+	fmt.Print(clientConfig)
 
 	return clientConfig, nil
 }
@@ -83,19 +99,13 @@ func parseConfigFromFile(configFilename string) (parsedYamlConfig, error) {
 	return parsedConfig, nil
 }
 
-func NewBufferbloater(configFilename string, logger *zap.SugaredLogger) (*Bufferbloater, error) {
+func NewBufferbloater(workload string, rqTimeout string, target string, logger *zap.SugaredLogger) (*Bufferbloater, error) {
 	bb := Bufferbloater{
 		log:      logger,
 		statsMgr: stats.NewStatsMgrImpl(logger),
 	}
 
-	parsedConfig, err := parseConfigFromFile(configFilename)
-	if err != nil {
-		bb.log.Fatalw("failed to parse yaml file",
-			"error", err)
-	}
-
-	clientConfig, err := clientConfigParse(parsedConfig)
+	clientConfig, err := clientConfigParse(workload, rqTimeout, target)
 	if err != nil {
 		bb.log.Fatalw("failed to create client config",
 			"error", err)
