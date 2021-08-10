@@ -118,12 +118,12 @@ func NewBufferbloater(workload string, rqTimeout string, target string, logger *
 
 func (bb *Bufferbloater) Run() {
 	// TODO: make folder configurable.
-	path, err := os.Getwd()
+	dirname, err := os.UserHomeDir()
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
-	fmt.Println("Creating status in path=" + path)
-	defer bb.statsMgr.DumpStatsToFolder(path + "/data")
+	fmt.Println("Creating stats in path=" + dirname)
+	defer bb.statsMgr.DumpStatsToFolder(dirname + "/data")
 
 	stopStats := make(chan struct{}, 1)
 	var statsWg sync.WaitGroup
