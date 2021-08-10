@@ -9,14 +9,12 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/tonya11en/bufferbloater/client"
-	"github.com/tonya11en/bufferbloater/server"
 	"github.com/tonya11en/bufferbloater/stats"
 )
 
 type Bufferbloater struct {
 	log      *zap.SugaredLogger
 	c        *client.Client
-	s        *server.Server
 	statsMgr *stats.StatsMgr
 }
 
@@ -33,18 +31,6 @@ type parsedYamlConfig struct {
 			Port    uint
 		} `yaml:"target_server"`
 	} `yaml:"client"`
-
-	Server struct {
-		Profile []struct {
-			LatencyDistribution []struct {
-				Weight  uint   `yaml:"weight"`
-				Latency string `yaml:"latency"`
-			} `yaml:"latency_distribution"`
-			Duration string
-		} `yaml:"profile"`
-		ListenPort uint `yaml:"listen_port"`
-		Threads    uint `yaml:"threads"`
-	}
 }
 
 // Creates a properly typed client config.
@@ -80,46 +66,6 @@ func clientConfigParse(parsedConfig parsedYamlConfig) (client.Config, error) {
 	return clientConfig, nil
 }
 
-func serverConfigParse(parsedConfig parsedYamlConfig) (server.Config, error) {
-	// TODO: validate config
-
-	serverConfig := server.Config{
-		ListenPort: parsedConfig.Server.ListenPort,
-		Threads:    parsedConfig.Server.Threads,
-	}
-
-	for _, segment := range parsedConfig.Server.Profile {
-		s := server.LatencySegment{}
-
-		// Calculate the latency distribution.
-		s.WeightSum = 0
-		s.LatencyDistribution = []server.WeightedLatency{}
-		for _, wl := range segment.LatencyDistribution {
-			l, err := time.ParseDuration(wl.Latency)
-			if err != nil {
-				return server.Config{}, err
-			}
-
-			weightedLatency := server.WeightedLatency{
-				Weight:  wl.Weight,
-				Latency: l,
-			}
-			s.LatencyDistribution = append(s.LatencyDistribution, weightedLatency)
-			s.WeightSum += wl.Weight
-		}
-
-		d, err := time.ParseDuration(segment.Duration)
-		if err != nil {
-			return server.Config{}, err
-		}
-		s.SegmentDuration = d
-
-		serverConfig.Profile = append(serverConfig.Profile, s)
-	}
-
-	return serverConfig, nil
-}
-
 func parseConfigFromFile(configFilename string) (parsedYamlConfig, error) {
 	// Read the config file.
 	data, err := ioutil.ReadFile(configFilename)
@@ -151,18 +97,10 @@ func NewBufferbloater(configFilename string, logger *zap.SugaredLogger) (*Buffer
 
 	clientConfig, err := clientConfigParse(parsedConfig)
 	if err != nil {
-		bb.log.Fatalw("failed to create server config",
+		bb.log.Fatalw("failed to create client config",
 			"error", err)
 	}
 	bb.c = client.NewClient(clientConfig, logger, bb.statsMgr)
-
-	serverConfig, err := serverConfigParse(parsedConfig)
-	if err != nil {
-		bb.log.Fatalw("failed to create server config",
-			"error", err)
-	}
-	bb.s = server.NewServer(serverConfig, logger, bb.statsMgr)
-
 	return &bb, nil
 }
 

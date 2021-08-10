@@ -35,18 +35,4 @@ client:
   rq_timeout: 5s
   target_server:
     address: 0.0.0.0
-    port: 9002
-server:
-  profile:
-    - duration: 320s
-      latency_distribution:
-      - weight: 90
-        latency: 5ms
-      - weight: 5
-        latency: 50ms
-      - weight: 4
-        latency: 100ms
-      - weight: 1
-        latency: 250ms
-  listen_port: 9002
-  threads: 4
+    port: 19002
